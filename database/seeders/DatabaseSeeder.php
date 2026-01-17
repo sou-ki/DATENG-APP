@@ -27,6 +27,8 @@ class DatabaseSeeder extends Seeder
             DivisionSeeder::class,
             BadgeSeeder::class,
             UserSeeder::class,
+            VisitorSeeder::class,
+            VisitRequestSeeder::class
         ]);
     }
 }
