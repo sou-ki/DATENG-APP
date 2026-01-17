@@ -13,22 +13,18 @@ return new class extends Migration
     {
         Schema::create('visit_logs', function (Blueprint $table) {
             $table->id();
-
+            
             $table->foreignId('visit_request_id')
                 ->constrained('visit_requests')
                 ->cascadeOnDelete();
-
-            $table->enum('action', [
-                'check_in',
-                'check_out',
-                'reject'
-            ]);
-
+                
+            $table->enum('action', ['check_in', 'check_out', 'reject']);
+            
             $table->foreignId('performed_by')
                 ->constrained('users')
                 ->cascadeOnDelete();
-
-            $table->timestamp('timestamp');
+                
+            $table->timestamp('timestamp'); // Ini yang kita gunakan, bukan created_at
             $table->text('notes')->nullable();
         });
 
@@ -39,6 +35,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('status_kunjungans');
+        Schema::dropIfExists('visit_logs');
     }
 };

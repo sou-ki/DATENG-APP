@@ -2,6 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Models\Badge;
+use App\Models\User;
+use App\Models\VisitRequest;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -51,7 +54,7 @@ class VisitRequestSeeder extends Seeder
                 'visit_date' => $visitDate,
                 'start_time' => $startTime->format('H:i:s'),
                 'end_time' => $endTime->format('H:i:s'),
-                'letter_path' => null, // nullable
+                'letter_path' => null,
                 'status' => $status,
                 'created_by' => $user->id,
                 'created_at' => now(),
@@ -83,8 +86,8 @@ class VisitRequestSeeder extends Seeder
                 'letter_path' => null,
                 'status' => 'registered',
                 'created_by' => $user->id,
-                'created_at' => now(),
-                'updated_at' => now(),
+                'created_at' => now()->subDays(1),
+                'updated_at' => now()->subDays(1),
             ]);
         }
 
@@ -116,6 +119,61 @@ class VisitRequestSeeder extends Seeder
                 'created_at' => now()->subDays(1),
                 'updated_at' => now(),
             ]);
+        }
+        
+        // ===== PERBAIKAN BAGIAN INI =====
+        // Create badge assignments for checked_in visits
+        $checkedInVisits = DB::table('visit_requests')->where('status', 'checked_in')->get();
+        $availableBadges = DB::table('badges')->where('status', 'available')->get()->toArray();
+        $securityUsers = DB::table('users')->where('role', 'security')->get();
+        
+        if ($securityUsers->isNotEmpty() && !empty($availableBadges)) {
+            $securityId = $securityUsers->first()->id;
+            
+            foreach ($checkedInVisits as $visit) {
+                if (!empty($availableBadges)) {
+                    $badge = array_shift($availableBadges);
+                    
+                    // Update badge status to in_use
+                    DB::table('badges')->where('id', $badge->id)->update(['status' => 'in_use']);
+                    
+                    // Create badge assignment
+                    DB::table('badge_assignments')->insert([
+                        'visit_request_id' => $visit->id,
+                        'badge_id' => $badge->id,
+                        'assigned_by' => $securityId,
+                        'assigned_at' => now()->subHours(rand(1, 3)),
+                        'returned_at' => null,
+                    ]);
+                    
+                    // Create visit log for check-in (TANPA created_at & updated_at)
+                    DB::table('visit_logs')->insert([
+                        'visit_request_id' => $visit->id,
+                        'action' => 'check_in',
+                        'performed_by' => $securityId,
+                        'timestamp' => now()->subHours(rand(1, 3)),
+                        'notes' => 'Check-in oleh security',
+                    ]);
+                }
+            }
+        }
+        
+        // Create some visit logs for checked_out visits
+        $checkedOutVisits = DB::table('visit_requests')->where('status', 'checked_out')->limit(3)->get();
+        
+        foreach ($checkedOutVisits as $visit) {
+            if ($securityUsers->isNotEmpty()) {
+                $securityId = $securityUsers->first()->id;
+                
+                // Create visit log for check-out
+                DB::table('visit_logs')->insert([
+                    'visit_request_id' => $visit->id,
+                    'action' => 'check_out',
+                    'performed_by' => $securityId,
+                    'timestamp' => now()->subHours(rand(1, 2)),
+                    'notes' => 'Check-out selesai',
+                ]);
+            }
         }
     }
 }

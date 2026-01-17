@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class VisitLog extends Model
 {
     use HasFactory;
+    public $timestamps = false;
 
     protected $fillable = [
         'visit_request_id',
