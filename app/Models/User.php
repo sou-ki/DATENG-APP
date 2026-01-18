@@ -68,8 +68,9 @@ class User extends Authenticatable
         return $this->hasMany(VisitLog::class, 'performed_by');
     }
 
-    public function visitRequests()
-    {
-        return $this->hasMany(VisitRequest::class);
-    }
+    // public function visitRequests()
+    // {
+    //     // return $this->hasMany(VisitRequest::class);
+    //     return $this->hasMany(VisitRequest::class, 'created_by');
+    // }
 }

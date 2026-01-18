@@ -106,7 +106,8 @@ class AdminDashboardController extends Controller
             return redirect()->route('admin.dashboard')->with('error', 'Tidak dapat menghapus akun sendiri.');
         }
 
-        if ($user->visitRequests()->exists()) {
+        // Perbaiki pengecekan relasi
+        if ($user->createdVisitRequests()->exists()) {
             return redirect()->route('admin.dashboard')->with('error', 'User memiliki riwayat kunjungan.');
         }
 
