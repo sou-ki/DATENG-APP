@@ -87,42 +87,32 @@ Route::middleware('auth')->group(function () {
         Route::get('/badges', [BadgeController::class, 'index'])->name('badges');
         Route::post('/badges/{badge}/report-issue', [BadgeController::class, 'markIssue'])->name('badges.report-issue');
         Route::post('/badges/{badge}/resolve-issue', [BadgeController::class, 'markResolved'])->name('badges.resolve-issue');
-        Route::post('/badges/{badge}/force-return', [BadgeController::class, 'forceReturn'])->name('badges.force-return');
         Route::get('/badges/statistics', [BadgeController::class, 'getStatistics'])->name('badges.statistics');
     });
 
     // === ADMIN ROUTES ===
     Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(function () {
-        Route::get('/dashboard', [AdminDashboardController::class, 'index'])
-            ->name('dashboard');
-
-        Route::get('/users', function () {
-            return view('admin.users.index');
-        })->name('users.index');
-
-        Route::get('/users/create', function () {
-            return view('admin.users.create');
-        })->name('users.create');
-
-        Route::get('/divisions', function () {
-            return view('admin.divisions.index');
-        })->name('divisions.index');
-
-        Route::get('/badges', function () {
-            return view('admin.badges.index');
-        })->name('badges.index');
-
-        Route::get('/reports/visits', function () {
-            return view('admin.reports.visits');
-        })->name('reports.visits');
-
-        Route::get('/audit/logs', function () {
-            return view('admin.audit.logs');
-        })->name('audit.logs');
-
-        Route::get('/system/status', function () {
-            return view('admin.system.status');
-        })->name('system.status');
+        // Dashboard utama dengan semua fitur
+        Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+        
+        // User Management
+        Route::post('/users', [AdminDashboardController::class, 'createUser'])->name('users.store');
+        Route::put('/users/{user}', [AdminDashboardController::class, 'updateUser'])->name('users.update');
+        Route::delete('/users/{user}', [AdminDashboardController::class, 'deleteUser'])->name('users.destroy');
+        
+        // Division Management
+        Route::post('/divisions', [AdminDashboardController::class, 'createDivision'])->name('divisions.store');
+        Route::put('/divisions/{division}', [AdminDashboardController::class, 'updateDivision'])->name('divisions.update');
+        Route::delete('/divisions/{division}', [AdminDashboardController::class, 'deleteDivision'])->name('divisions.destroy');
+        
+        // Badge Management
+        Route::post('/badges', [AdminDashboardController::class, 'createBadge'])->name('badges.store');
+        Route::put('/badges/{badge}', [AdminDashboardController::class, 'updateBadge'])->name('badges.update');
+        Route::delete('/badges/{badge}', [AdminDashboardController::class, 'deleteBadge'])->name('badges.destroy');
+        
+        // Visitor Management
+        Route::put('/visitors/{visitor}', [AdminDashboardController::class, 'updateVisitor'])->name('visitors.update');
+        Route::delete('/visitors/{visitor}', [AdminDashboardController::class, 'deleteVisitor'])->name('visitors.destroy');
     });
 
     // === COMMON ROUTES ===

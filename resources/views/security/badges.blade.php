@@ -137,7 +137,8 @@
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        @if($badge->status === 'in_use')
+                                        {{-- HAPUS TOMBOL FORCE RETURN --}}
+                                        {{-- @if($badge->status === 'in_use')
                                         <button type="button" 
                                                 class="btn btn-outline-warning"
                                                 data-bs-toggle="modal" 
@@ -146,7 +147,7 @@
                                                 data-badge-code="{{ $badge->badge_code }}">
                                             <i class="bi bi-arrow-return-left"></i>
                                         </button>
-                                        @endif
+                                        @endif --}}
                                         
                                         <button type="button" 
                                                 class="btn btn-outline-danger"
@@ -298,8 +299,8 @@
     </div>
 </div>
 
-<!-- Force Return Modal -->
-<div class="modal fade" id="forceReturnModal" tabindex="-1" aria-hidden="true">
+<!-- HAPUS FORCE RETURN MODAL -->
+{{-- <div class="modal fade" id="forceReturnModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -328,7 +329,7 @@
             </div>
         </div>
     </div>
-</div>
+</div> --}}
 
 <!-- Report Issue Modal -->
 <div class="modal fade" id="reportIssueModal" tabindex="-1" aria-hidden="true">
@@ -459,23 +460,6 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Force Return Modal
-    const forceReturnModal = document.getElementById('forceReturnModal');
-    if (forceReturnModal) {
-        forceReturnModal.addEventListener('show.bs.modal', function(event) {
-            const button = event.relatedTarget;
-            const badgeId = button.getAttribute('data-badge-id');
-            const badgeCode = button.getAttribute('data-badge-code');
-            
-            document.getElementById('forceBadgeCode').textContent = badgeCode;
-            
-            const form = document.getElementById('forceReturnForm');
-            if (form) {
-                form.action = `/security/badges/${badgeId}/force-return`;
-            }
-        });
-    }
-    
     // Report Issue Modal
     const reportIssueModal = document.getElementById('reportIssueModal');
     if (reportIssueModal) {
@@ -493,7 +477,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Resolve Issue Modal (dynamic buttons)
+    // Resolve Issue Modal (manual trigger)
     document.addEventListener('click', function(e) {
         if (e.target.classList.contains('btn-resolve-issue')) {
             e.preventDefault();
@@ -514,60 +498,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Check for badges with issues and add resolve buttons
-    setTimeout(function() {
-        // We'll fetch badges with issues via AJAX or use server-side data
-        // For now, we'll add a static message if there are badges marked as in_use but not assigned
-        const badgesInUse = document.querySelectorAll('tr td span.badge.bg-warning');
-        if (badgesInUse.length > 0) {
-            // Check if any badge is in_use but not in assigned badges table
-            const assignedBadgeCodes = Array.from(
-                document.querySelectorAll('#assignedBadgesTable .badge.bg-info')
-            ).map(el => el.textContent.trim());
-            
-            const issueBadges = [];
-            badgesInUse.forEach((badgeElement, index) => {
-                const row = badgeElement.closest('tr');
-                const badgeCode = row.querySelector('td:first-child .fw-bold').textContent.trim();
-                
-                if (!assignedBadgeCodes.includes(badgeCode)) {
-                    const badgeId = row.querySelector('[data-badge-id]')?.getAttribute('data-badge-id');
-                    if (badgeId) {
-                        issueBadges.push({
-                            id: badgeId,
-                            code: badgeCode
-                        });
-                    }
-                }
-            });
-            
-            if (issueBadges.length > 0) {
-                const container = document.querySelector('.card-body');
-                if (container) {
-                    const alert = document.createElement('div');
-                    alert.className = 'alert alert-danger mt-3';
-                    alert.innerHTML = `
-                        <h6><i class="bi bi-exclamation-triangle me-2"></i> Badge dengan Masalah</h6>
-                        <p class="mb-2">Beberapa badge memiliki laporan masalah:</p>
-                        <div class="d-flex flex-wrap gap-2">
-                            ${issueBadges.map(badge => `
-                                <span class="badge bg-danger">
-                                    ${badge.code}
-                                    <button type="button" 
-                                            class="btn-resolve-issue btn btn-sm btn-light ms-2"
-                                            data-badge-id="${badge.id}"
-                                            data-badge-code="${badge.code}">
-                                        <i class="bi bi-check-lg"></i>
-                                    </button>
-                                </span>
-                            `).join('')}
-                        </div>
-                    `;
-                    container.insertBefore(alert, container.firstChild);
-                }
-            }
-        }
-    }, 1000);
+    // HAPUS BAGIAN INI (yang menampilkan alert masalah otomatis)
+    // Bagian JavaScript yang mengecek badge dengan masalah dihapus seluruhnya
+    
 });
 </script>
 @endpush

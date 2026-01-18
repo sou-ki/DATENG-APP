@@ -44,6 +44,8 @@
     <li class="nav-item mb-2">
         <a class="nav-link" href="{{ route('security.badges') }}">
             <i class="bi bi-tag me-2"></i> Kelola Badge
+            {{-- HAPUS NOTIFIKASI ISSUE --}}
+            {{-- 
             @php
                 $badgeIssues = auth()->check() ? 
                     \App\Models\Badge::where('status', 'in_use')
@@ -55,6 +57,7 @@
             @if($badgeIssues > 0)
                 <span class="badge bg-danger float-end">{{ $badgeIssues }}</span>
             @endif
+            --}}
         </a>
     </li>
 </ul>
@@ -74,3 +77,31 @@
         </div>
     </div>
 @endif
+
+</script>
+
+<style>
+.nav-link.active {
+    background-color: rgba(13, 110, 253, 0.1);
+    color: #0d6efd !important;
+    border-left: 3px solid #0d6efd;
+    font-weight: 500;
+}
+
+.nav-link {
+    padding: 0.5rem 1rem;
+    color: #495057;
+    transition: all 0.2s;
+    border-left: 3px solid transparent;
+}
+
+.nav-link:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    border-left-color: #adb5bd;
+}
+
+.badge {
+    font-size: 0.65rem;
+    padding: 0.25em 0.5em;
+}
+</style>

@@ -5,10 +5,9 @@ namespace App\Http\Controllers\Security;
 use App\Http\Controllers\Controller;
 use App\Models\Badge;
 use App\Models\BadgeAssignment;
-use App\Models\VisitRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-
+use Illuminate\Support\Facades\Auth;
 
 class BadgeController extends Controller
 {
@@ -107,7 +106,7 @@ class BadgeController extends Controller
         DB::table('visit_logs')->insert([
             'visit_request_id' => null, // No specific visit
             'action' => 'badge_issue',
-            'performed_by' => auth()->id(),
+            'performed_by' => Auth::id(),
             'timestamp' => now(),
             'notes' => "Badge {$badge->badge_code} dilaporkan {$validated['issue_type']} oleh {$validated['reporter_name']}: {$validated['description']}",
         ]);
@@ -146,78 +145,13 @@ class BadgeController extends Controller
         DB::table('visit_logs')->insert([
             'visit_request_id' => null,
             'action' => 'badge_resolved',
-            'performed_by' => auth()->id(),
+            'performed_by' => Auth::id(),
             'timestamp' => now(),
             'notes' => "Badge {$badge->badge_code} telah diperbaiki/ditemukan: {$validated['resolution']}",
         ]);
         
         return redirect()->back()
             ->with('success', "Badge {$badge->badge_code} berhasil ditandai sebagai tersedia kembali.");
-    }
-    
-    /**
-     * Quick action: Force return badge
-     */
-    public function forceReturn(Badge $badge)
-    {
-        // Find active assignment
-        $assignment = BadgeAssignment::where('badge_id', $badge->id)
-            ->whereNull('returned_at')
-            ->first();
-            
-        if (!$assignment) {
-            return redirect()->back()
-                ->with('error', 'Badge tidak sedang digunakan.');
-        }
-        
-        DB::beginTransaction();
-        
-        try {
-            // Update badge assignment
-            $assignment->update([
-                'returned_at' => now(),
-            ]);
-            
-            // Update badge status
-            $badge->update([
-                'status' => 'available',
-            ]);
-            
-            // Update visit request status if still checked_in
-            $visitRequest = $assignment->visitRequest;
-            if ($visitRequest->status === 'checked_in') {
-                $visitRequest->update(['status' => 'checked_out']);
-                
-                // Create visit log
-                DB::table('visit_logs')->insert([
-                    'visit_request_id' => $visitRequest->id,
-                    'action' => 'check_out',
-                    'performed_by' => auth()->id(),
-                    'timestamp' => now(),
-                    'notes' => 'Check-out paksa oleh security karena badge dikembalikan',
-                ]);
-            }
-            
-            // Create badge return log
-            DB::table('visit_logs')->insert([
-                'visit_request_id' => null,
-                'action' => 'badge_force_return',
-                'performed_by' => auth()->id(),
-                'timestamp' => now(),
-                'notes' => "Badge {$badge->badge_code} dikembalikan paksa oleh security. Kunjungan ID: {$visitRequest->id}",
-            ]);
-            
-            DB::commit();
-            
-            return redirect()->back()
-                ->with('success', "Badge {$badge->badge_code} berhasil dikembalikan paksa.");
-                
-        } catch (\Exception $e) {
-            DB::rollBack();
-            
-            return redirect()->back()
-                ->with('error', 'Terjadi kesalahan saat mengembalikan badge.');
-        }
     }
     
     /**

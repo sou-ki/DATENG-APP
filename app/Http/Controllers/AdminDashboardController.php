@@ -5,120 +5,241 @@ namespace App\Http\Controllers;
 use App\Models\Badge;
 use App\Models\User;
 use App\Models\Visitor;
-use App\Models\VisitLog;
 use App\Models\VisitRequest;
-use Carbon\Carbon;
+use App\Models\Division; 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class AdminDashboardController extends Controller
 {
-    public function index()
+    /**
+     * Display admin dashboard with all management features
+     */
+    public function index(Request $request)
     {
-        // Hitung statistik user
-        $counts = [
-            'users' => User::count(),
-            'internal' => User::where('role', 'internal')->count(),
-            'security' => User::where('role', 'security')->count(),
-            'admin' => User::where('role', 'admin')->count(),
+        // Statistics
+        $stats = [
+            'users' => [
+                'total' => User::count(),
+                'internal' => User::where('role', 'internal')->count(),
+                'security' => User::where('role', 'security')->count(),
+                'admin' => User::where('role', 'admin')->count(),
+            ],
             'visitors' => Visitor::count(),
-            'visits_30d' => VisitRequest::where('created_at', '>=', now()->subDays(30))->count(),
+            'badges' => [
+                'total' => Badge::count(),
+                'available' => Badge::where('status', 'available')->count(),
+                'in_use' => Badge::where('status', 'in_use')->count(),
+            ],
             'visits_today' => VisitRequest::whereDate('visit_date', today())->count(),
-            'badges' => Badge::count(),
-            'badges_available' => Badge::where('status', 'available')->count(),
         ];
-        
-        // Statistik kunjungan 7 hari terakhir
-        $visitStats = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $date = now()->subDays($i);
-            
-            $stats = VisitRequest::whereDate('visit_date', $date)
-                ->selectRaw('status, COUNT(*) as count')
-                ->groupBy('status')
-                ->get()
-                ->pluck('count', 'status');
-                
-            $visitStats[] = [
-                'date' => $date,
-                'registered' => $stats['registered'] ?? 0,
-                'checked_in' => $stats['checked_in'] ?? 0,
-                'checked_out' => $stats['checked_out'] ?? 0,
-                'total' => array_sum($stats->toArray()),
-            ];
-        }
-        
-        // Info sistem (sederhana)
-        $systemInfo = [
-            'db_size' => $this->getDatabaseSize(),
-            'storage_free' => $this->getStorageFreeSpace(),
-            'log_count' => VisitLog::count(),
-            'uptime' => 'Active', // Simplified for now
-        ];
-        
-        // Audit log terbaru
-        $recentLogs = VisitLog::with(['visitRequest.visitor', 'performer'])
-            ->orderBy('timestamp', 'desc')
-            ->limit(10)
-            ->get();
-            
-        return view('admin.dashboard', compact(
-            'counts',
-            'visitStats',
-            'systemInfo',
-            'recentLogs'
-        ));
+
+        // Get data for tables
+        $users = User::with('division')->orderBy('name')->get();
+        $badges = Badge::orderBy('badge_code')->get();
+        $visitors = Visitor::withCount('visitRequests')->orderBy('full_name')->get();
+        $divisions = Division::withCount(['users', 'visitRequests'])->orderBy('division_name')->get();
+
+        return view('admin.dashboard', compact('stats', 'users', 'badges', 'visitors', 'divisions'));
     }
-    
-    private function getDatabaseSize()
+
+    /**
+     * Create new user
+     */
+    public function createUser(Request $request)
     {
-        try {
-            // Method 1: Using Laravel query builder
-            $result = DB::table('information_schema.tables')
-                ->select(DB::raw('SUM(data_length + index_length) / 1024 / 1024 as size_mb'))
-                ->where('table_schema', DB::raw('DATABASE()'))
-                ->first();
-            
-            return $result ? round($result->size_mb, 2) . ' MB' : 'N/A';
-            
-        } catch (\Exception $e) {
-            try {
-                // Method 2: Simpler approach - just show table counts
-                $tables = [
-                    'users', 'visitors', 'visit_requests', 
-                    'badges', 'badge_assignments', 'visit_logs'
-                ];
-                
-                $totalRecords = 0;
-                foreach ($tables as $table) {
-                    if (DB::getSchemaBuilder()->hasTable($table)) {
-                        $totalRecords += DB::table($table)->count();
-                    }
-                }
-                
-                return $totalRecords . ' records';
-                
-            } catch (\Exception $e) {
-                return 'N/A';
-            }
-        }
+        $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'password' => ['required', 'string', 'min:8'],
+            'role' => ['required', 'in:internal,security,admin'],
+            'division_id' => ['nullable', 'required_if:role,internal', 'exists:divisions,id'],
+        ]);
+
+        $userData = $request->only(['name', 'email', 'role', 'division_id']);
+        $userData['password'] = Hash::make($request->password);
+
+        User::create($userData);
+
+        return redirect()->route('admin.dashboard')->with('success', 'User berhasil ditambahkan.');
     }
-    
-    private function getStorageFreeSpace()
+
+    /**
+     * Update user
+     */
+    public function updateUser(Request $request, User $user)
     {
-        try {
-            $total = disk_total_space(base_path());
-            $free = disk_free_space(base_path());
-            
-            if ($total > 0) {
-                $percentage = round(($free / $total) * 100, 1);
-                return $percentage . '% free';
-            }
-            
-            return 'N/A';
-            
-        } catch (\Exception $e) {
-            return 'N/A';
+        $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 
+                Rule::unique('users')->ignore($user->id)],
+            'role' => ['required', 'in:internal,security,admin'],
+            'division_id' => ['nullable', 'required_if:role,internal', 'exists:divisions,id'],
+            'password' => ['nullable', 'string', 'min:8'],
+        ]);
+
+        $userData = $request->only(['name', 'email', 'role', 'division_id']);
+        
+        if ($request->filled('password')) {
+            $userData['password'] = Hash::make($request->password);
         }
+
+        // Reset division if not internal
+        if ($request->role !== 'internal') {
+            $userData['division_id'] = null;
+        }
+
+        $user->update($userData);
+
+        return redirect()->route('admin.dashboard')->with('success', 'User berhasil diperbarui.');
+    }
+
+    /**
+     * Delete user
+     */
+    public function deleteUser(User $user)
+    {
+        if ($user->id === Auth::id()) {
+            return redirect()->route('admin.dashboard')->with('error', 'Tidak dapat menghapus akun sendiri.');
+        }
+
+        if ($user->visitRequests()->exists()) {
+            return redirect()->route('admin.dashboard')->with('error', 'User memiliki riwayat kunjungan.');
+        }
+
+        $user->delete();
+
+        return redirect()->route('admin.dashboard')->with('success', 'User berhasil dihapus.');
+    }
+
+    /**
+     * Create new division
+     */
+    public function createDivision(Request $request)
+    {
+        $request->validate([
+            'division_name' => ['required', 'string', 'max:255', 'unique:divisions'],
+            'description' => ['nullable', 'string'],
+        ]);
+
+        Division::create($request->only(['division_name', 'description']));
+
+        return redirect()->route('admin.dashboard')->with('success', 'Divisi berhasil ditambahkan.');
+    }
+
+    /**
+     * Update division
+     */
+    public function updateDivision(Request $request, Division $division)
+    {
+        $request->validate([
+            'division_name' => ['required', 'string', 'max:255', 
+                Rule::unique('divisions')->ignore($division->id)],
+            'description' => ['nullable', 'string'],
+        ]);
+
+        $division->update($request->only(['division_name', 'description']));
+
+        return redirect()->route('admin.dashboard')->with('success', 'Divisi berhasil diperbarui.');
+    }
+
+    /**
+     * Delete division
+     */
+    public function deleteDivision(Division $division)
+    {
+        if ($division->users()->exists()) {
+            return redirect()->route('admin.dashboard')->with('error', 'Divisi memiliki user terkait.');
+        }
+
+        if ($division->visitRequests()->exists()) {
+            return redirect()->route('admin.dashboard')->with('error', 'Divisi memiliki riwayat kunjungan.');
+        }
+
+        $division->delete();
+
+        return redirect()->route('admin.dashboard')->with('success', 'Divisi berhasil dihapus.');
+    }
+
+    /**
+     * Update visitor
+     */
+    public function updateVisitor(Request $request, Visitor $visitor)
+    {
+        $request->validate([
+            'full_name' => ['required', 'string', 'max:255'],
+            'identity_number' => ['required', 'string', 'max:50', 
+                Rule::unique('visitors')->ignore($visitor->id)],
+            'institution' => ['required', 'string', 'max:255'],
+            'phone_number' => ['required', 'string', 'max:20'],
+        ]);
+
+        $visitor->update($request->only(['full_name', 'identity_number', 'institution', 'phone_number']));
+
+        return redirect()->route('admin.dashboard')->with('success', 'Visitor berhasil diperbarui.');
+    }
+
+    /**
+     * Create new badge
+     */
+    public function createBadge(Request $request)
+    {
+        $request->validate([
+            'badge_code' => ['required', 'string', 'max:50', 'unique:badges'],
+            'access_area' => ['required', 'string', 'max:255'],
+            'status' => ['required', 'in:available,in_use'],
+        ]);
+
+        Badge::create($request->only(['badge_code', 'access_area', 'status']));
+
+        return redirect()->route('admin.dashboard')->with('success', 'Badge berhasil ditambahkan.');
+    }
+
+    /**
+     * Update badge
+     */
+    public function updateBadge(Request $request, Badge $badge)
+    {
+        $request->validate([
+            'badge_code' => ['required', 'string', 'max:50', 
+                Rule::unique('badges')->ignore($badge->id)],
+            'access_area' => ['required', 'string', 'max:255'],
+            'status' => ['required', 'in:available,in_use'],
+        ]);
+
+        $badge->update($request->only(['badge_code', 'access_area', 'status']));
+
+        return redirect()->route('admin.dashboard')->with('success', 'Badge berhasil diperbarui.');
+    }
+
+    /**
+     * Delete badge
+     */
+    public function deleteBadge(Badge $badge)
+    {
+        if ($badge->badgeAssignments()->exists()) {
+            return redirect()->route('admin.dashboard')->with('error', 'Badge memiliki riwayat penggunaan.');
+        }
+
+        $badge->delete();
+
+        return redirect()->route('admin.dashboard')->with('success', 'Badge berhasil dihapus.');
+    }
+
+    /**
+     * Delete visitor
+     */
+    public function deleteVisitor(Visitor $visitor)
+    {
+        if ($visitor->visitRequests()->exists()) {
+            return redirect()->route('admin.dashboard')->with('error', 'Visitor memiliki riwayat kunjungan.');
+        }
+
+        $visitor->delete();
+
+        return redirect()->route('admin.dashboard')->with('success', 'Visitor berhasil dihapus.');
     }
 }

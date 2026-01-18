@@ -4,24 +4,21 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Badge;
-use App\Models\BadgeIssue;
+use App\Models\BadgeAssignment;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class BadgeController extends Controller
 {
     /**
-     * Display a listing of badges.
+     * Display a listing of the resource.
      */
     public function index(Request $request)
     {
         $search = $request->query('search');
         $status = $request->query('status');
         
-        $query = Badge::withCount(['badgeAssignments'])
-            ->with(['badgeAssignments' => function($query) {
-                $query->latest()->limit(1);
-            }]);
+        $query = Badge::query();
         
         if ($search) {
             $query->where(function($q) use ($search) {
@@ -30,26 +27,23 @@ class BadgeController extends Controller
             });
         }
         
-        if ($status && in_array($status, ['available', 'in_use', 'maintenance'])) {
+        if ($status && in_array($status, ['available', 'in_use'])) {
             $query->where('status', $status);
         }
         
         $badges = $query->orderBy('badge_code')->paginate(20);
         
-        // Statistics
         $stats = [
             'total' => Badge::count(),
             'available' => Badge::where('status', 'available')->count(),
             'in_use' => Badge::where('status', 'in_use')->count(),
-            'maintenance' => Badge::where('status', 'maintenance')->count(),
-            'lost_damaged' => BadgeIssue::whereIn('status', ['reported', 'investigating'])->count(),
         ];
         
-        return view('admin.badges.index', compact('badges', 'search', 'status', 'stats'));
+        return view('admin.badges.index', compact('badges', 'stats', 'search', 'status'));
     }
 
     /**
-     * Show the form for creating a new badge.
+     * Show the form for creating a new resource.
      */
     public function create()
     {
@@ -57,56 +51,45 @@ class BadgeController extends Controller
     }
 
     /**
-     * Store a newly created badge.
+     * Store a newly created resource in storage.
      */
     public function store(Request $request)
     {
         $validated = $request->validate([
             'badge_code' => ['required', 'string', 'max:50', 'unique:badges'],
             'access_area' => ['required', 'string', 'max:255'],
+            'status' => ['required', 'in:available,in_use'],
             'description' => ['nullable', 'string', 'max:500'],
-            'status' => ['required', Rule::in(['available', 'maintenance'])],
-            'purchase_date' => ['nullable', 'date'],
-            'purchase_price' => ['nullable', 'numeric', 'min:0'],
         ]);
         
-        $badge = Badge::create($validated);
+        Badge::create($validated);
         
         return redirect()->route('admin.badges.index')
-            ->with('success', "Badge {$badge->badge_code} berhasil ditambahkan.");
+            ->with('success', 'Badge berhasil ditambahkan.');
     }
 
     /**
-     * Display badge details.
+     * Display the specified resource.
      */
     public function show(Badge $badge)
     {
         $badge->load(['badgeAssignments' => function($query) {
             $query->with(['visitRequest.visitor', 'assigner'])
-                  ->orderBy('assigned_at', 'desc');
+                  ->orderBy('assigned_at', 'desc')
+                  ->limit(20);
         }]);
         
-        $issues = BadgeIssue::where('badge_id', $badge->id)
-            ->orderBy('reported_at', 'desc')
-            ->get();
-            
-        $currentAssignment = $badge->badgeAssignments()
-            ->whereNull('returned_at')
-            ->first();
-            
-        // Statistics
-        $stats = [
+        $usageStats = [
             'total_assignments' => $badge->badgeAssignments()->count(),
-            'total_hours' => $this->calculateTotalUsageHours($badge),
-            'avg_duration' => $this->calculateAverageDuration($badge),
-            'issue_count' => $issues->count(),
+            'current_assignment' => $badge->badgeAssignments()->whereNull('returned_at')->first(),
+            'avg_duration' => $this->getAverageDuration($badge),
         ];
         
-        return view('admin.badges.show', compact('badge', 'issues', 'currentAssignment', 'stats'));
+        return view('admin.badges.show', compact('badge', 'usageStats'));
     }
 
     /**
-     * Show the form for editing a badge.
+     * Show the form for editing the specified resource.
      */
     public function edit(Badge $badge)
     {
@@ -114,7 +97,7 @@ class BadgeController extends Controller
     }
 
     /**
-     * Update the specified badge.
+     * Update the specified resource in storage.
      */
     public function update(Request $request, Badge $badge)
     {
@@ -122,109 +105,69 @@ class BadgeController extends Controller
             'badge_code' => ['required', 'string', 'max:50', 
                 Rule::unique('badges')->ignore($badge->id)],
             'access_area' => ['required', 'string', 'max:255'],
+            'status' => ['required', 'in:available,in_use'],
             'description' => ['nullable', 'string', 'max:500'],
-            'status' => ['required', Rule::in(['available', 'in_use', 'maintenance'])],
-            'purchase_date' => ['nullable', 'date'],
-            'purchase_price' => ['nullable', 'numeric', 'min:0'],
-            'notes' => ['nullable', 'string', 'max:1000'],
         ]);
         
         $badge->update($validated);
         
         return redirect()->route('admin.badges.show', $badge)
-            ->with('success', "Badge {$badge->badge_code} berhasil diperbarui.");
+            ->with('success', 'Data badge berhasil diperbarui.');
     }
 
     /**
-     * Remove the specified badge.
+     * Remove the specified resource from storage.
      */
     public function destroy(Badge $badge)
     {
-        // Check if badge is currently in use
-        if ($badge->status === 'in_use') {
-            return redirect()->back()
-                ->with('error', 'Tidak dapat menghapus badge yang sedang digunakan.');
-        }
-        
-        // Check if badge has assignment history
+        // Check if badge has assignments
         if ($badge->badgeAssignments()->exists()) {
-            return redirect()->back()
+            return redirect()->route('admin.badges.index')
                 ->with('error', 'Tidak dapat menghapus badge yang memiliki riwayat penggunaan.');
         }
         
         $badge->delete();
         
         return redirect()->route('admin.badges.index')
-            ->with('success', "Badge {$badge->badge_code} berhasil dihapus.");
+            ->with('success', 'Badge berhasil dihapus.');
     }
 
     /**
-     * Manage badge issues.
+     * Get usage history for a badge
      */
-    public function issues(Request $request)
+    public function usageHistory(Badge $badge)
     {
-        $status = $request->query('status');
-        
-        $query = BadgeIssue::with(['badge', 'reporter']);
-        
-        if ($status) {
-            $query->where('status', $status);
-        }
-        
-        $issues = $query->orderBy('reported_at', 'desc')->paginate(20);
-        
-        $stats = [
-            'total' => BadgeIssue::count(),
-            'reported' => BadgeIssue::where('status', 'reported')->count(),
-            'investigating' => BadgeIssue::where('status', 'investigating')->count(),
-            'resolved' => BadgeIssue::where('status', 'resolved')->count(),
-            'lost' => BadgeIssue::where('issue_type', 'lost')->count(),
-            'damaged' => BadgeIssue::where('issue_type', 'damaged')->count(),
-        ];
-        
-        return view('admin.badges.issues', compact('issues', 'status', 'stats'));
+        $assignments = BadgeAssignment::with(['visitRequest.visitor', 'assigner'])
+            ->where('badge_id', $badge->id)
+            ->orderBy('assigned_at', 'desc')
+            ->paginate(50);
+            
+        return view('admin.badges.usage-history', compact('badge', 'assignments'));
     }
 
-    /**
-     * Update issue status.
-     */
-    public function updateIssue(Request $request, BadgeIssue $issue)
+    private function getAverageDuration($badge)
     {
-        $validated = $request->validate([
-            'status' => ['required', Rule::in(['investigating', 'resolved', 'closed'])],
-            'resolution' => ['nullable', 'string', 'max:500'],
-            'resolved_by' => ['nullable', 'string', 'max:255'],
-            'resolved_at' => ['nullable', 'date'],
-        ]);
-        
-        $issue->update($validated);
-        
-        // If resolved and badge was in maintenance, change to available
-        if ($validated['status'] === 'resolved' && $issue->badge->status === 'maintenance') {
-            $issue->badge->update(['status' => 'available']);
+        $assignments = $badge->badgeAssignments()
+            ->whereNotNull('returned_at')
+            ->get();
+            
+        if ($assignments->isEmpty()) {
+            return 'N/A';
         }
         
-        return redirect()->back()
-            ->with('success', "Status laporan berhasil diperbarui.");
-    }
-
-    private function calculateTotalUsageHours(Badge $badge)
-    {
-        $totalMinutes = $badge->badgeAssignments()
-            ->whereNotNull('returned_at')
-            ->selectRaw('SUM(TIMESTAMPDIFF(MINUTE, assigned_at, returned_at)) as total')
-            ->first()->total ?? 0;
-            
-        return floor($totalMinutes / 60) . 'h ' . ($totalMinutes % 60) . 'm';
-    }
-    
-    private function calculateAverageDuration(Badge $badge)
-    {
-        $avgMinutes = $badge->badgeAssignments()
-            ->whereNotNull('returned_at')
-            ->selectRaw('AVG(TIMESTAMPDIFF(MINUTE, assigned_at, returned_at)) as avg')
-            ->first()->avg ?? 0;
-            
-        return round($avgMinutes) . 'm';
+        $totalMinutes = 0;
+        foreach ($assignments as $assignment) {
+            $totalMinutes += $assignment->assigned_at->diffInMinutes($assignment->returned_at);
+        }
+        
+        $avgMinutes = $totalMinutes / $assignments->count();
+        
+        if ($avgMinutes < 60) {
+            return round($avgMinutes) . ' menit';
+        } elseif ($avgMinutes < 1440) {
+            return round($avgMinutes / 60, 1) . ' jam';
+        } else {
+            return round($avgMinutes / 1440, 1) . ' hari';
+        }
     }
 }

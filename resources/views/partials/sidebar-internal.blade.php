@@ -60,3 +60,31 @@
         <div class="fw-bold">{{ auth()->user()->division->division_name }}</div>
     </div>
 @endif
+
+</script>
+
+<style>
+.nav-link.active {
+    background-color: rgba(13, 110, 253, 0.1);
+    color: #0d6efd !important;
+    border-left: 3px solid #0d6efd;
+    font-weight: 500;
+}
+
+.nav-link {
+    padding: 0.5rem 1rem;
+    color: #495057;
+    transition: all 0.2s;
+    border-left: 3px solid transparent;
+}
+
+.nav-link:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    border-left-color: #adb5bd;
+}
+
+.badge {
+    font-size: 0.65rem;
+    padding: 0.25em 0.5em;
+}
+</style>
