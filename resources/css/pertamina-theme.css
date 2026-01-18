@@ -1,0 +1,200 @@
+/* Pertamina Theme Variables */
+:root {
+    --pertamina-primary: #0033a0;
+    --pertamina-secondary: #e4002b;
+    --pertamina-success: #00a859;
+    --pertamina-info: #0066b3;
+    --pertamina-warning: #ff6b00;
+    --pertamina-danger: #e4002b;
+    --pertamina-light: #f8f9fa;
+    --pertamina-dark: #00205b;
+    --pertamina-gray: #6c757d;
+}
+
+/* Override Bootstrap Colors */
+.text-pertamina-primary { color: var(--pertamina-primary) !important; }
+.text-pertamina-secondary { color: var(--pertamina-secondary) !important; }
+.text-pertamina-success { color: var(--pertamina-success) !important; }
+.text-pertamina-dark { color: var(--pertamina-dark) !important; }
+
+.bg-pertamina-primary { background-color: var(--pertamina-primary) !important; }
+.bg-pertamina-secondary { background-color: var(--pertamina-secondary) !important; }
+.bg-pertamina-success { background-color: var(--pertamina-success) !important; }
+.bg-pertamina-dark { background-color: var(--pertamina-dark) !important; }
+
+/* Pertamina Stripes */
+.pertamina-stripes-horizontal {
+    height: 6px;
+    background: linear-gradient(90deg, 
+        var(--pertamina-primary) 0%, 
+        var(--pertamina-primary) 33%, 
+        var(--pertamina-secondary) 33%, 
+        var(--pertamina-secondary) 66%, 
+        var(--pertamina-success) 66%, 
+        var(--pertamina-success) 100%);
+}
+
+.pertamina-stripes-vertical {
+    width: 6px;
+    background: linear-gradient(180deg, 
+        var(--pertamina-primary) 0%, 
+        var(--pertamina-primary) 33%, 
+        var(--pertamina-secondary) 33%, 
+        var(--pertamina-secondary) 66%, 
+        var(--pertamina-success) 66%, 
+        var(--pertamina-success) 100%);
+}
+
+/* Pertamina Buttons */
+.btn-pertamina-primary {
+    background: linear-gradient(135deg, var(--pertamina-primary) 0%, var(--pertamina-info) 100%);
+    border: none;
+    color: white;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.btn-pertamina-primary:hover {
+    background: linear-gradient(135deg, var(--pertamina-dark) 0%, var(--pertamina-primary) 100%);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 51, 160, 0.3);
+}
+
+.btn-pertamina-secondary {
+    background: linear-gradient(135deg, var(--pertamina-secondary) 0%, #ff3366 100%);
+    border: none;
+    color: white;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.btn-pertamina-secondary:hover {
+    background: linear-gradient(135deg, #b30021 0%, var(--pertamina-secondary) 100%);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(228, 0, 43, 0.3);
+}
+
+/* Pertamina Cards */
+.card-pertamina {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 51, 160, 0.1);
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.card-pertamina:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 51, 160, 0.15);
+}
+
+.card-pertamina-header {
+    background: linear-gradient(135deg, var(--pertamina-dark) 0%, var(--pertamina-primary) 100%);
+    color: white;
+    border-radius: 12px 12px 0 0 !important;
+    padding: 1rem 1.5rem;
+}
+
+/* Pertamina Badges */
+.badge-pertamina-primary {
+    background-color: var(--pertamina-primary);
+    color: white;
+}
+
+.badge-pertamina-secondary {
+    background-color: var(--pertamina-secondary);
+    color: white;
+}
+
+.badge-pertamina-success {
+    background-color: var(--pertamina-success);
+    color: white;
+}
+
+/* Pertamina Alerts */
+.alert-pertamina {
+    border-radius: 10px;
+    border: none;
+    border-left: 4px solid var(--pertamina-primary);
+}
+
+.alert-pertamina-primary {
+    background-color: rgba(0, 51, 160, 0.1);
+    color: var(--pertamina-primary);
+}
+
+.alert-pertamina-secondary {
+    background-color: rgba(228, 0, 43, 0.1);
+    color: var(--pertamina-secondary);
+    border-left-color: var(--pertamina-secondary);
+}
+
+.alert-pertamina-success {
+    background-color: rgba(0, 168, 89, 0.1);
+    color: var(--pertamina-success);
+    border-left-color: var(--pertamina-success);
+}
+
+/* Pertamina Table */
+.table-pertamina thead th {
+    background: linear-gradient(135deg, var(--pertamina-primary) 0%, var(--pertamina-info) 100%);
+    color: white;
+    border: none;
+    font-weight: 600;
+}
+
+.table-pertamina tbody tr:hover {
+    background-color: rgba(0, 51, 160, 0.05);
+}
+
+/* Pertamina Navbar */
+.navbar-pertamina {
+    background: linear-gradient(135deg, var(--pertamina-dark) 0%, var(--pertamina-primary) 100%);
+    box-shadow: 0 2px 10px rgba(0, 51, 160, 0.2);
+}
+
+/* Pertamina Sidebar */
+.sidebar-pertamina {
+    background: linear-gradient(180deg, var(--pertamina-dark) 0%, var(--pertamina-primary) 100%);
+    color: white;
+}
+
+.sidebar-pertamina .nav-link {
+    color: rgba(255, 255, 255, 0.8);
+    border-radius: 8px;
+    margin: 2px 0;
+    transition: all 0.3s;
+}
+
+.sidebar-pertamina .nav-link:hover,
+.sidebar-pertamina .nav-link.active {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    transform: translateX(5px);
+}
+
+/* Gradient Text */
+.text-gradient-pertamina {
+    background: linear-gradient(135deg, var(--pertamina-primary) 0%, var(--pertamina-secondary) 50%, var(--pertamina-success) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Loading Spinner */
+.spinner-pertamina {
+    width: 3rem;
+    height: 3rem;
+    border: 0.25em solid rgba(0, 51, 160, 0.2);
+    border-right-color: var(--pertamina-primary);
+}
+
+/* Progress Bar */
+.progress-pertamina {
+    background-color: rgba(0, 51, 160, 0.1);
+}
+
+.progress-bar-pertamina {
+    background: linear-gradient(90deg, var(--pertamina-primary) 0%, var(--pertamina-success) 100%);
+}
