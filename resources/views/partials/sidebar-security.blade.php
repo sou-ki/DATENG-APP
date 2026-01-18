@@ -25,7 +25,9 @@
             <i class="bi bi-box-arrow-right me-2"></i> Check-out
             @php
                 $activeCount = auth()->check() ? 
-                    \App\Models\VisitRequest::where('status', 'checked_in')->count() : 0;
+                    \App\Models\VisitRequest::where('status', 'checked_in')
+                        ->whereHas('badgeAssignment')
+                        ->count() : 0;
             @endphp
             @if($activeCount > 0)
                 <span class="badge bg-warning float-end">{{ $activeCount }}</span>
@@ -42,12 +44,17 @@
     <li class="nav-item mb-2">
         <a class="nav-link" href="{{ route('security.badges') }}">
             <i class="bi bi-tag me-2"></i> Kelola Badge
-        </a>
-    </li>
-    
-    <li class="nav-item mb-2">
-        <a class="nav-link" href="{{ route('security.reports') }}">
-            <i class="bi bi-file-earmark-text me-2"></i> Laporan Harian
+            @php
+                $badgeIssues = auth()->check() ? 
+                    \App\Models\Badge::where('status', 'in_use')
+                        ->whereDoesntHave('badgeAssignments', function($q) {
+                            $q->whereNull('returned_at');
+                        })
+                        ->count() : 0;
+            @endphp
+            @if($badgeIssues > 0)
+                <span class="badge bg-danger float-end">{{ $badgeIssues }}</span>
+            @endif
         </a>
     </li>
 </ul>

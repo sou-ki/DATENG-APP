@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class Badge extends Model
 {
@@ -49,5 +50,22 @@ class Badge extends Model
     public function scopeInUse($query)
     {
         return $query->where('status', 'in_use');
+    }
+
+    public function scopeWithIssues($query)
+    {
+        return $query->where('status', 'in_use')
+            ->whereDoesntHave('badgeAssignments', function($q) {
+                $q->whereNull('returned_at');
+            });
+    }
+
+    public function hasActiveIssue()
+    {
+        return DB::table('visit_logs')
+            ->whereNull('visit_request_id')
+            ->where('action', 'badge_issue')
+            ->where('notes', 'like', "%Badge {$this->badge_code}%")
+            ->exists();
     }
 }

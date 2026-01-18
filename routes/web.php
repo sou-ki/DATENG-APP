@@ -12,6 +12,7 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\Security\BadgeController;
 
 /*
 |--------------------------------------------------------------------------
@@ -51,7 +52,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/visit-requests/{visitRequest}/cancel', [VisitRequestController::class, 'cancel'])
             ->name('visit-requests.cancel');
         
-        // Visitors
+        // Visitors (CRUD Lengkap)
         Route::resource('visitors', VisitorController::class);
         
         // API for visitor search
@@ -62,10 +63,10 @@ Route::middleware('auth')->group(function () {
                 ->orWhere('identity_number', 'like', "%{$query}%")
                 ->limit(10)
                 ->get(['id', 'full_name', 'identity_number', 'institution']);
-        })->name('api.visitors.search');
+        });
     });
 
-    // === SECURITY ROUTES ===
+   // === SECURITY ROUTES ===
     Route::middleware(['role:security'])->prefix('security')->name('security.')->group(function () {
         // Dashboard
         Route::get('/dashboard', [SecurityDashboardController::class, 'index'])
@@ -82,15 +83,12 @@ Route::middleware('auth')->group(function () {
         // Active Visits
         Route::get('/active-visits', [ActiveVisitController::class, 'index'])->name('active-visits');
         
-        // Badges
-        Route::get('/badges', function () {
-            return view('security.badges');
-        })->name('badges');
-        
-        // Reports
-        Route::get('/reports', function () {
-            return view('security.reports');
-        })->name('reports');
+        // Badges Management
+        Route::get('/badges', [BadgeController::class, 'index'])->name('badges');
+        Route::post('/badges/{badge}/report-issue', [BadgeController::class, 'markIssue'])->name('badges.report-issue');
+        Route::post('/badges/{badge}/resolve-issue', [BadgeController::class, 'markResolved'])->name('badges.resolve-issue');
+        Route::post('/badges/{badge}/force-return', [BadgeController::class, 'forceReturn'])->name('badges.force-return');
+        Route::get('/badges/statistics', [BadgeController::class, 'getStatistics'])->name('badges.statistics');
     });
 
     // === ADMIN ROUTES ===

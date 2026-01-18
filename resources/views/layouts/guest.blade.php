@@ -45,7 +45,7 @@
                         <div class="logo mb-3">
                             <i class="bi bi-building"></i> Visitor System
                         </div>
-                        <p class="text-muted">Sistem Manajemen Kunjungan Perusahaan</p>
+                        <p class="text-muted">Sistem Manajemen Visitor</p>
                     </div>
 
                     {{ $slot }}

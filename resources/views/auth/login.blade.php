@@ -39,7 +39,7 @@
 
         <div class="d-grid gap-2">
             <button type="submit" class="btn btn-primary btn-lg">
-                <i class="bi bi-box-arrow-in-right"></i> Login ke Sistem
+                <i class="bi bi-box-arrow-in-right"></i> Login
             </button>
             
             @if (Route::has('password.request'))

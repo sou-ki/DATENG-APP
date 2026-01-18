@@ -99,10 +99,14 @@
                             </div>
                         </a>
                         <div class="dropdown-menu dropdown-menu-end">
+                            {{-- HAPUS/COMMENT BAGIAN INI --}}
+                            {{-- 
                             <a class="dropdown-item" href="#">
                                 <i class="bi bi-person me-2"></i> Profil
                             </a>
                             <div class="dropdown-divider"></div>
+                            --}}
+                            
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
                                 <button type="submit" class="dropdown-item">
